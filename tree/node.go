@@ -10,8 +10,6 @@ type Node struct {
 	mu sync.Mutex
 	WebRequests int32
 	TimeSpent int32
-
-
 }
 
 func NewNode() *Node {

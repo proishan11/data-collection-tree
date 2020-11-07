@@ -37,6 +37,10 @@ func TestTreeFindByCountry(t *testing.T) {
 
 func TestTreeInsertConcurrently(t *testing.T) {
 	rand.Seed(time.Now().UnixNano())
+
+	// No of nodes to be inserted concurrently
+	iter := 1000000
+
 	tree := NewTree()
 
 	var countries = []string {"US", "IN", "HON", "CN", "UK", "RUS", "ESP", "BRA"}
@@ -52,7 +56,7 @@ func TestTreeInsertConcurrently(t *testing.T) {
 	var totalWebRequest int32 = 0
 	var totalTimeSpent int32 = 0
 
-	for i:=0; i<100000; i++ {
+	for i:=0; i<iter; i++ {
 		node := NewNode()
 		node.WebRequests = int32(rand.Intn(max-min) + min)
 		node.TimeSpent = int32(rand.Intn(max-min) + min)
