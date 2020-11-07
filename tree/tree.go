@@ -1,5 +1,7 @@
 package tree
 
+import "sync"
+
 type tree struct {
 	rootNode *Node
 }
@@ -10,6 +12,10 @@ type Tree interface {
 	GetRoot() Node
 }
 
+var (
+	mu = sync.Mutex{}
+)
+
 func (t *tree) GetRoot() Node{
 	return *t.rootNode
 }
@@ -17,10 +23,12 @@ func (t *tree) GetRoot() Node{
 func(t *tree) Insert(newNode Node) {
 
 	t.rootNode.mu.Lock()
+	defer t.rootNode.mu.Unlock()
 	t.rootNode.WebRequests += newNode.WebRequests
 	t.rootNode.TimeSpent += newNode.TimeSpent
-	c, ok := t.rootNode.Children[newNode.Country]
-	t.rootNode.mu.Unlock()
+
+	_, ok := t.rootNode.Children.Load(newNode.Country)
+
 
 	if !ok {
 		cNode := NewNode()
@@ -33,41 +41,42 @@ func(t *tree) Insert(newNode Node) {
 		dNode.WebRequests = newNode.WebRequests
 		dNode.Country = newNode.Country
 
-		t.rootNode.mu.Lock()
-		t.rootNode.Children[newNode.Country] = cNode
-		t.rootNode.Children[newNode.Country].Children[newNode.Device] = dNode
-		t.rootNode.mu.Unlock()
+		cNode.Children.Store(newNode.Device, dNode)
+		t.rootNode.Children.Store(newNode.Country, cNode)
+
 	} else {
 
+		temp, _ := t.rootNode.Children.Load(newNode.Country)
+		c := temp.(*Node)
 		c.mu.Lock()
+		defer c.mu.Unlock()
 		c.WebRequests += newNode.WebRequests
 		c.TimeSpent += newNode.TimeSpent
-		//c.mu.Unlock()
-		//
-		//c.mu.Lock()
-		d, ok := c.Children[newNode.Device]
-		c.mu.Unlock()
+		d, ok := c.Children.Load(newNode.Device)
 
 		if ok {
-			d.mu.Lock()
-			d.TimeSpent += newNode.TimeSpent
-			d.WebRequests += newNode.WebRequests
-			d.mu.Unlock()
+			dNode := d.(*Node)
+			dNode.mu.Lock()
+			defer dNode.mu.Unlock()
+			dNode.TimeSpent += newNode.TimeSpent
+			dNode.WebRequests += newNode.WebRequests
 		} else {
 			dNode := NewNode()
 			dNode.TimeSpent = newNode.TimeSpent
 			dNode.WebRequests = newNode.WebRequests
 			dNode.Device = newNode.Device
-
-			t.rootNode.Children[newNode.Country].mu.Lock()
-			t.rootNode.Children[newNode.Country].Children[newNode.Device] = dNode
-			t.rootNode.Children[newNode.Country].mu.Unlock()
+			c.Children.Store(newNode.Device, dNode)
 		}
 	}
 }
 
 func(t *tree) FindByCountry(country string) *Node {
-	return t.rootNode.Children[country]
+	res, ok := t.rootNode.Children.Load(country)
+	if ok {
+		return res.(*Node)
+	} else {
+		return nil
+	}
 }
 
 func NewTree() Tree {
