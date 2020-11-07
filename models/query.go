@@ -8,6 +8,7 @@ type Query struct {
 }
 
 func (q *Query) GetCountry() string {
+
 	for _, c := range q.Dim {
 		if c.Key == "country" {
 			return c.Val

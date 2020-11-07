@@ -3,9 +3,7 @@ package tree
 import "sync"
 
 type Node struct {
-
 	mu sync.Mutex
-
 	WebRequests int32
 	TimeSpent int32
 	Country string

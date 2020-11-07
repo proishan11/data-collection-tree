@@ -6,6 +6,7 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/proishan11/data-collection-tree/models"
 	"github.com/proishan11/data-collection-tree/tree"
+	"github.com/proishan11/data-collection-tree/utils"
 	"net/http"
 )
 
@@ -23,8 +24,10 @@ func insertHandler(response http.ResponseWriter, req *http.Request) {
 		node := reqBody.Serialize()
 		t.Insert(node)
 		fmt.Println("Successfully inserted")
+		response.WriteHeader(http.StatusOK)
 	} else {
-		fmt.Println("Some error occurred")
+		response.WriteHeader(http.StatusInternalServerError)
+		fmt.Println("Some error occurred ", err)
 	}
 }
 
@@ -38,8 +41,15 @@ func queryHandler(response http.ResponseWriter, req *http.Request) {
 		fmt.Println(reqBody.GetCountry())
 		node := t.FindByCountry(reqBody.GetCountry())
 
-		fmt.Println(node.TimeSpent)
-		fmt.Println(node.WebRequests)
+		if node != nil {
+			res := utils.ResponseFromNode(*node)
+			response.WriteHeader(http.StatusOK)
+			json.NewEncoder(response).Encode(res)
+		} else {
+			response.WriteHeader(http.StatusOK)
+		}
+	} else {
+		response.WriteHeader(http.StatusInternalServerError)
 	}
 }
 
@@ -50,33 +60,4 @@ func main() {
 	router.HandleFunc("/v1/query", queryHandler).Methods("GET")
 
 	http.ListenAndServe(port, router)
-
-	//t := tree.NewTree()
-	//node := tree.NewNode()
-	//
-	//node.Country = "US"
-	//node.Device = "Mobile"
-	//node.WebRequests = 10
-	//node.TimeSpent = 100
-	//
-	//n2 := tree.NewNode()
-	//n2.Country = "US"
-	//n2.WebRequests = 20
-	//n2.TimeSpent = 90
-	//n2.Device = "Laptop"
-	//
-	//n3 := tree.NewNode()
-	//n3.Country = "US"
-	//n3.WebRequests = 20
-	//n3.TimeSpent = 90
-	//n3.Device = "Laptop"
-	//
-	//t.Insert(*node)
-	//t.Insert(*n2)
-	//t.Insert(*n3)
-	//
-	//fmt.Println("Insertion Complete")
-	//fmt.Println(t.FindByCountry("US").WebRequests)
-	//fmt.Println(t.FindByCountry("US").TimeSpent)
-
 }
