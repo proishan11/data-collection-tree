@@ -3,58 +3,51 @@ package tree
 import "fmt"
 
 type tree struct {
-	rootNode Node
+	rootNode *Node
 }
 
 type Tree interface {
 	Insert(newNode Node)
+	FindByCountry(country string) *Node
 }
 
 func(t *tree) Insert(newNode Node) {
 
-	// acquire root Node lock here
 	t.rootNode.mu.Lock()
 	t.rootNode.WebRequests += newNode.WebRequests
 	t.rootNode.TimeSpent += newNode.TimeSpent
 	t.rootNode.mu.Unlock()
-	// free rootNode lock here
 
 	c, ok := t.rootNode.Children[newNode.Country]
 	if !ok {
-
 		fmt.Println("Country Node not present")
+		cNode := NewNode()
+		cNode.TimeSpent = newNode.TimeSpent
+		cNode.WebRequests = newNode.WebRequests
 
-		// acquire Node lock
+		dNode := NewNode()
+		dNode.TimeSpent = newNode.TimeSpent
+		dNode.WebRequests = newNode.WebRequests
+
 		t.rootNode.mu.Lock()
-		t.rootNode.Children[newNode.Country] = newNode
-		t.rootNode.Children[newNode.Country].Children[newNode.Device] = newNode
+		t.rootNode.Children[newNode.Country] = cNode
+		t.rootNode.Children[newNode.Country].Children[newNode.Device] = dNode
 		t.rootNode.mu.Unlock()
-		// free Node lock
-
 	} else {
 
-		// acquire Lock
-
+		c.mu.Lock()
 		c.WebRequests += newNode.WebRequests
 		c.TimeSpent += newNode.TimeSpent
-		t.rootNode.Children[newNode.Country] = c
+		c.mu.Unlock()
 
 		d, ok := t.rootNode.Children[newNode.Country].Children[newNode.Device]
 
 		if ok {
 			fmt.Println("Device Node present")
+			d.mu.Lock()
 			d.TimeSpent += newNode.TimeSpent
 			d.WebRequests += newNode.WebRequests
-
-			// acquire lock
-			//t.rootNode.Children[newNode.Country].Children[newNode.Device].mu.Lock()
-
-			// There is no need to lock this I guess because of the initial nil value
-			// Should I lock the parent pointer here?
-			t.rootNode.Children[newNode.Country].Children[newNode.Device] = d
-			//t.rootNode.Children[newNode.Country].Children[newNode.Device].mu.Unlock()
-			// free lock
-
+			d.mu.Unlock()
 		} else {
 			fmt.Println("Device Node not present")
 
@@ -70,6 +63,11 @@ func(t *tree) Insert(newNode Node) {
 		}
 	}
 }
+
+func(t *tree) FindByCountry(country string) *Node {
+	return t.rootNode.Children[country]
+}
+
 
 func NewTree() Tree {
 	newNode := NewNode()
